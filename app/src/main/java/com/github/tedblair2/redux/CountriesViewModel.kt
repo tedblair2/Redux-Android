@@ -76,4 +76,9 @@ class CountriesViewModel @Inject constructor(
     fun onEvent(action: CountriesAction){
         dispatch?.invoke(action)
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        dispatch=null
+    }
 }
