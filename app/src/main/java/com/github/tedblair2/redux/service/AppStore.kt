@@ -14,7 +14,7 @@ class AppStore @Inject constructor() : Store {
     private val _appState= MutableStateFlow(AppState())
     private val appState=_appState.asStateFlow()
 
-    override fun dispatch(action: Action) {
+    private fun dispatch(action: Action) {
         val newAction=applyMiddleWares(action)
 //        var currentState=appState.value
 //        reducers.forEach {
@@ -47,7 +47,8 @@ class AppStore @Inject constructor() : Store {
         return this
     }
 
-    override fun getCurrentState(): Flow<AppState> {
+    override fun getCurrentState(dispatcher:(Dispatch)->Unit): Flow<AppState> {
+        dispatcher(::dispatch)
         return appState
     }
 

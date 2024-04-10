@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.tedblair2.redux.action.AnotherCounterAction
 import com.github.tedblair2.redux.model.AnotherCounterState
 import com.github.tedblair2.redux.model.AppState
+import com.github.tedblair2.redux.service.Dispatch
 import com.github.tedblair2.redux.service.MiddleWare
 import com.github.tedblair2.redux.service.Reducer
 import com.github.tedblair2.redux.service.Store
@@ -18,10 +19,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CounterViewModel @Inject constructor(
-    private val store: Store
+     store: Store
 ):ViewModel() {
 
-    val counterState=store.getCurrentState()
+    private var dispatch:Dispatch?=null
+
+    val counterState=store.getCurrentState(dispatcher = {dispatch=it})
         .map { it.anotherCounterState }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AnotherCounterState())
 
@@ -61,11 +64,11 @@ class CounterViewModel @Inject constructor(
     init {
         store.applyReducer(appReducer)
             .applyMiddleWare(middleWare)
-            .dispatch(AnotherCounterAction.Init)
+        dispatch?.invoke(AnotherCounterAction.Init)
     }
 
     fun onEvent(action: AnotherCounterAction){
-        store.dispatch(action)
+        dispatch?.invoke(action)
     }
 
     private suspend fun fakeAsyncCall():Int{
@@ -76,5 +79,10 @@ class CounterViewModel @Inject constructor(
     private suspend fun anotherFakeSyncCall():Int{
         delay(700)
         return 50
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        dispatch=null
     }
 }

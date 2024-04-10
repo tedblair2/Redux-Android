@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.tedblair2.redux.action.CounterAction
 import com.github.tedblair2.redux.model.AppState
 import com.github.tedblair2.redux.model.CounterState
+import com.github.tedblair2.redux.service.Dispatch
 import com.github.tedblair2.redux.service.MiddleWare
 import com.github.tedblair2.redux.service.Reducer
 import com.github.tedblair2.redux.service.Store
@@ -18,10 +19,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
-    private val store: Store
+    store: Store
 ):ViewModel() {
 
-    val counterState=store.getCurrentState()
+    private var dispatch:Dispatch?=null
+    val counterState=store.getCurrentState(dispatcher = {
+        dispatch=it
+    })
         .map { it.counterState }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CounterState())
 
@@ -60,10 +64,15 @@ class AppViewModel @Inject constructor(
     init {
         store.applyReducer(appReducer)
             .applyMiddleWare(middleWare)
-            .dispatch(CounterAction.Init)
+        dispatch?.invoke(CounterAction.Init)
     }
 
     fun onEvent(counterAction: CounterAction){
-        store.dispatch(counterAction)
+        dispatch?.invoke(counterAction)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        dispatch=null
     }
 }

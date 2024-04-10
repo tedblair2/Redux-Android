@@ -6,6 +6,7 @@ import com.github.tedblair2.redux.action.CountriesAction
 import com.github.tedblair2.redux.model.AppState
 import com.github.tedblair2.redux.model.CountryScreenState
 import com.github.tedblair2.redux.service.CountryService
+import com.github.tedblair2.redux.service.Dispatch
 import com.github.tedblair2.redux.service.MiddleWare
 import com.github.tedblair2.redux.service.Reducer
 import com.github.tedblair2.redux.service.Store
@@ -18,11 +19,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CountriesViewModel @Inject constructor(
-    private val countryService: CountryService,
-    private val store: Store
+    store: Store,
+    private val countryService: CountryService
 ):ViewModel() {
 
-    val countryState=store.getCurrentState()
+    private var dispatch:Dispatch?=null
+    val countryState=store.getCurrentState(dispatcher = {dispatch=it})
         .map { it.countryScreenState }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000),CountryScreenState())
 
@@ -68,10 +70,10 @@ class CountriesViewModel @Inject constructor(
     init {
         store.applyReducer(appStateReducer)
             .applyMiddleWare(middleWare)
-            .dispatch(CountriesAction.GetCountries)
+        dispatch?.invoke(CountriesAction.GetCountries)
     }
 
     fun onEvent(action: CountriesAction){
-        store.dispatch(action)
+        dispatch?.invoke(action)
     }
 }
