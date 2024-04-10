@@ -3,25 +3,28 @@ package com.github.tedblair2.redux
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.tedblair2.redux.action.CountriesAction
+import com.github.tedblair2.redux.model.AppState
 import com.github.tedblair2.redux.model.CountryScreenState
 import com.github.tedblair2.redux.service.CountryService
 import com.github.tedblair2.redux.service.MiddleWare
 import com.github.tedblair2.redux.service.Reducer
-import com.github.tedblair2.redux.service.createStore
+import com.github.tedblair2.redux.service.Store
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class CountriesViewModel @Inject constructor(
-    private val countryService: CountryService
+    private val countryService: CountryService,
+    private val store: Store
 ):ViewModel() {
 
-    private val _countryState= MutableStateFlow(CountryScreenState())
-    val countryState=_countryState.asStateFlow()
+    val countryState=store.getCurrentState()
+        .map { it.countryScreenState }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000),CountryScreenState())
 
     private val reducer:Reducer<CountryScreenState> = {old, action ->
         when(action){
@@ -38,7 +41,11 @@ class CountriesViewModel @Inject constructor(
         }
     }
 
-    private val middleWare:MiddleWare<CountryScreenState> = {store, action, next ->
+    private val appStateReducer:Reducer<AppState> = {old, action ->
+        old.copy(countryScreenState = reducer(old.countryScreenState,action))
+    }
+
+    private val middleWare:MiddleWare = { store , action , next ->
         when(action){
             CountriesAction.GetCountries->{
                 viewModelScope.launch {
@@ -58,15 +65,10 @@ class CountriesViewModel @Inject constructor(
         }
     }
 
-    private val store= createStore(CountryScreenState(),reducer,middleWare)
-
     init {
-        store.subscribe { currentState->
-            _countryState.update {
-                currentState
-            }
-        }
-        store.dispatch(CountriesAction.GetCountries)
+        store.applyReducer(appStateReducer)
+            .applyMiddleWare(middleWare)
+            .dispatch(CountriesAction.GetCountries)
     }
 
     fun onEvent(action: CountriesAction){

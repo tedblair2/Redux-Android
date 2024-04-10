@@ -1,43 +1,66 @@
 package com.github.tedblair2.redux.service
 
-class AppStore<S : State> (
-    initialState: S,
-    private val reducer: Reducer<S>,
-    vararg middleWare:MiddleWare<S>
-): Store<S> {
+import com.github.tedblair2.redux.model.AppState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import javax.inject.Inject
 
-    private val subscribers= mutableSetOf<StoreSubscriber<S>>()
-    private val middleWares= middleWare
+class AppStore @Inject constructor() : Store {
 
-    private var state:S = initialState
-        set(value) {
-            field=value
-            subscribers.forEach { it(value) }
-        }
+    private val reducers= mutableSetOf<Reducer<AppState>>()
+    private val middleWares= mutableSetOf<MiddleWare>()
+    private val _appState= MutableStateFlow(AppState())
+    private val appState=_appState.asStateFlow()
 
     override fun dispatch(action: Action) {
-        val newAction=applyMiddleWare(action)
-        val newState=reducer(state,newAction)
-        if (newState==state){
+        val newAction=applyMiddleWares(action)
+//        var currentState=appState.value
+//        reducers.forEach {
+//            currentState=it(currentState,newAction)
+//        }
+//        if (currentState==appState.value){
+//            return
+//        }
+//        _appState.update {
+//            currentState
+//        }
+        val newState=reducers.fold(appState.value){ currentState , reducer->
+            reducer(currentState, newAction)
+        }
+        if (newState==appState.value){
             return
         }
-        state=newState
+        _appState.update {
+            newState
+        }
     }
 
-    override fun subscribe(subscriber: StoreSubscriber<S>)=subscribers.add(element = subscriber)
+    override fun applyMiddleWare(middleWare: MiddleWare): Store {
+        middleWares.add(middleWare)
+        return this
+    }
 
-    override fun unsubscribe(subscriber: StoreSubscriber<S>)=subscribers.remove(element = subscriber)
+    override fun applyReducer(reducer: Reducer<AppState>): Store {
+        reducers.add(reducer)
+        return this
+    }
 
-    private fun applyMiddleWare(action: Action):Action{
+    override fun getCurrentState(): Flow<AppState> {
+        return appState
+    }
+
+    private fun applyMiddleWares(action: Action):Action{
         return next(0)(this,action)
     }
 
-    private fun next(index:Int):Next<S>{
+    private fun next(index:Int):Next{
         if (index==middleWares.size){
             return {_,action->action}
         }
         return {store, action ->
-            middleWares[index].invoke(store,action,next(index+1))
+            middleWares.toList()[index].invoke(store,action,next(index+1))
         }
     }
 }

@@ -1,7 +1,11 @@
 package com.github.tedblair2.redux.service
 
-interface Store<S:State> {
+import com.github.tedblair2.redux.model.AppState
+import kotlinx.coroutines.flow.Flow
+
+interface Store{
     fun dispatch(action: Action)
-    fun subscribe(subscriber: StoreSubscriber<S>):Boolean
-    fun unsubscribe(subscriber: StoreSubscriber<S>):Boolean
+    fun applyMiddleWare(middleWare: MiddleWare):Store
+    fun applyReducer(reducer: Reducer<AppState>):Store
+    fun getCurrentState():Flow<AppState>
 }

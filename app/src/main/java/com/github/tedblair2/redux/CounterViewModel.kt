@@ -4,24 +4,28 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.tedblair2.redux.action.AnotherCounterAction
 import com.github.tedblair2.redux.model.AnotherCounterState
+import com.github.tedblair2.redux.model.AppState
 import com.github.tedblair2.redux.service.MiddleWare
 import com.github.tedblair2.redux.service.Reducer
-import com.github.tedblair2.redux.service.createStore
+import com.github.tedblair2.redux.service.Store
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CounterViewModel @Inject constructor():ViewModel() {
+class CounterViewModel @Inject constructor(
+    private val store: Store
+):ViewModel() {
 
-    private val _counterState= MutableStateFlow(AnotherCounterState())
-    val counterState=_counterState.asStateFlow()
+    val counterState=store.getCurrentState()
+        .map { it.anotherCounterState }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AnotherCounterState())
 
-    private val reducer:Reducer<AnotherCounterState> = {old,action->
+    private val counterReducer:Reducer<AnotherCounterState> = { old , action->
         when(action){
             AnotherCounterAction.Increment->old.copy(count = old.count+1)
             AnotherCounterAction.Decrement->old.copy(count = old.count-1)
@@ -30,7 +34,11 @@ class CounterViewModel @Inject constructor():ViewModel() {
         }
     }
 
-    private val middleWare:MiddleWare<AnotherCounterState> = {store, action, next ->
+    private val appReducer:Reducer<AppState> = { old , action ->
+        old.copy(anotherCounterState = counterReducer(old.anotherCounterState,action))
+    }
+
+    private val middleWare:MiddleWare = { store , action , next ->
         when(action){
             AnotherCounterAction.LoadData->{
                 viewModelScope.launch {
@@ -39,13 +47,7 @@ class CounterViewModel @Inject constructor():ViewModel() {
                 }
                 action
             }
-            else->next(store, action)
-        }
-    }
-
-    private val anotherMiddleWare:MiddleWare<AnotherCounterState> = {store, action, next ->
-        when(action){
-            is AnotherCounterAction.LoadNewData->{
+            AnotherCounterAction.LoadNewData->{
                 viewModelScope.launch {
                     val data=anotherFakeSyncCall()
                     store.dispatch(AnotherCounterAction.IncreaseByValue(data))
@@ -56,15 +58,10 @@ class CounterViewModel @Inject constructor():ViewModel() {
         }
     }
 
-    private val store= createStore(AnotherCounterState(),reducer,middleWare,anotherMiddleWare)
-
     init {
-        store.subscribe {currentState->
-            _counterState.update {
-                currentState
-            }
-        }
-        store.dispatch(AnotherCounterAction.Init)
+        store.applyReducer(appReducer)
+            .applyMiddleWare(middleWare)
+            .dispatch(AnotherCounterAction.Init)
     }
 
     fun onEvent(action: AnotherCounterAction){
