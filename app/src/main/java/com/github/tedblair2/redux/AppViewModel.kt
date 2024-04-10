@@ -25,17 +25,17 @@ class AppViewModel @Inject constructor(
         .map { it.counterState }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CounterState())
 
-    private val middleWare:MiddleWare = { store , action , next ->
+    private val middleWare:MiddleWare = { state,action,dispatch,next->
         when(action){
             CounterAction.LoadData->{
                 viewModelScope.launch {
                     val data= fakeAsyncCall()
                     val newAction=CounterAction.DataLoaded(data)
-                    store.dispatch(newAction)
+                    dispatch(newAction)
                 }
                 action
             }
-            else->next(store, action)
+            else->next(state, action, dispatch)
         }
     }
 

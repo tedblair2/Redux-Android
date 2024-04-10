@@ -38,23 +38,23 @@ class CounterViewModel @Inject constructor(
         old.copy(anotherCounterState = counterReducer(old.anotherCounterState,action))
     }
 
-    private val middleWare:MiddleWare = { store , action , next ->
+    private val middleWare:MiddleWare = { state , action, dispatch , next ->
         when(action){
             AnotherCounterAction.LoadData->{
                 viewModelScope.launch {
                     val data=fakeAsyncCall()
-                    store.dispatch(AnotherCounterAction.IncreaseByValue(data))
+                    dispatch(AnotherCounterAction.IncreaseByValue(data))
                 }
                 action
             }
             AnotherCounterAction.LoadNewData->{
                 viewModelScope.launch {
                     val data=anotherFakeSyncCall()
-                    store.dispatch(AnotherCounterAction.IncreaseByValue(data))
+                    dispatch(AnotherCounterAction.IncreaseByValue(data))
                 }
                 action
             }
-            else->next(store, action)
+            else->next(state, action, dispatch)
         }
     }
 

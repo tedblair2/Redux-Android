@@ -52,15 +52,15 @@ class AppStore @Inject constructor() : Store {
     }
 
     private fun applyMiddleWares(action: Action):Action{
-        return next(0)(this,action)
+        return next(0)(appState.value,action,::dispatch)
     }
 
     private fun next(index:Int):Next{
         if (index==middleWares.size){
-            return {_,action->action}
+            return {_,action,_->action}
         }
-        return {store, action ->
-            middleWares.toList()[index].invoke(store,action,next(index+1))
+        return {state, action,dispatch ->
+            middleWares.toList()[index].invoke(state,action,dispatch,next(index+1))
         }
     }
 }

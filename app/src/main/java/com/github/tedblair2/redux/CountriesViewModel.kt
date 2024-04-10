@@ -45,23 +45,23 @@ class CountriesViewModel @Inject constructor(
         old.copy(countryScreenState = reducer(old.countryScreenState,action))
     }
 
-    private val middleWare:MiddleWare = { store , action , next ->
+    private val middleWare:MiddleWare = {state, action, dispatch, next ->
         when(action){
             CountriesAction.GetCountries->{
                 viewModelScope.launch {
                     val countries=countryService.getCountries()
-                    store.dispatch(CountriesAction.CountriesResult(countries))
+                    dispatch(CountriesAction.CountriesResult(countries))
                 }
                 action
             }
             is CountriesAction.SelectCountry->{
                 viewModelScope.launch {
                     val country=countryService.getCountry(action.code)
-                    store.dispatch(CountriesAction.SelectedCountry(country))
+                    dispatch(CountriesAction.SelectedCountry(country))
                 }
                 action
             }
-            else->next(store, action)
+            else->next(state, action, dispatch)
         }
     }
 
