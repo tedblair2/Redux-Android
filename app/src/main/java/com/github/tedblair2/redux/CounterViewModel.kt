@@ -24,7 +24,7 @@ class CounterViewModel @Inject constructor(
 
     private var dispatch:Dispatch?=null
 
-    val counterState=store.getCurrentState(dispatcher = {dispatch=it})
+    val counterState=store.getCurrentState(subscriber = {dispatch=it})
         .map { it.anotherCounterState }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AnotherCounterState())
 

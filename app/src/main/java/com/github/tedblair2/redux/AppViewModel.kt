@@ -23,7 +23,7 @@ class AppViewModel @Inject constructor(
 ):ViewModel() {
 
     private var dispatch:Dispatch?=null
-    val counterState=store.getCurrentState(dispatcher = {
+    val counterState=store.getCurrentState(subscriber = {
         dispatch=it
     })
         .map { it.counterState }

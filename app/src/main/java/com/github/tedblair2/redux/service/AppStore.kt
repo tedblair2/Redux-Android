@@ -47,8 +47,8 @@ class AppStore @Inject constructor() : Store {
         return this
     }
 
-    override fun getCurrentState(dispatcher:(Dispatch)->Unit): Flow<AppState> {
-        dispatcher(::dispatch)
+    override fun getCurrentState(subscriber: Subscriber): Flow<AppState> {
+        subscriber(::dispatch)
         return appState
     }
 

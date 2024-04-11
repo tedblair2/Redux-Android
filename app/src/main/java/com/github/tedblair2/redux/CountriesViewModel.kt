@@ -24,7 +24,7 @@ class CountriesViewModel @Inject constructor(
 ):ViewModel() {
 
     private var dispatch:Dispatch?=null
-    val countryState=store.getCurrentState(dispatcher = {dispatch=it})
+    val countryState=store.getCurrentState(subscriber = {dispatch=it})
         .map { it.countryScreenState }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000),CountryScreenState())
 
